@@ -101,6 +101,54 @@ const EquipmentType = new GraphQLObjectType({
   })
 })
 
+const MonsterType = new GraphQLObjectType({
+  name: 'MonsterType',
+  fields: () => ({
+    alignment: {type:GraphQLString},
+    armor_class: {type:GraphQLInt},
+    challenge_rating: {type:GraphQLInt},
+    charisma: {type:GraphQLInt},
+    constitution: {type:GraphQLInt},
+    damage_immunities: {type:GraphQLString},
+    damage_resistances: {type:GraphQLString},
+    damage_vulnerabilities: {type:GraphQLString},
+    dexterity: {type:GraphQLInt},
+    hit_dice: {type:GraphQLString},
+    hit_points: {type:GraphQLInt},
+    id: {type:GraphQLString},
+    intelligence: {type:GraphQLInt},
+    languages: {type:GraphQLString},
+    name: {type:GraphQLString},
+    other_speeds: {type:GraphQLString},
+    reactions: {
+      type: GraphQLList(ReactionType),
+      resolve(parent,args){
+        return runQuery("SELECT * FROM monster_reactions_link WHERE monster_id = $id;",{$id: parent.id})
+      }
+    },
+    size: {type:GraphQLString},
+    speed_climb: {type:GraphQLString},
+    speed_hover: {type:GraphQLString},
+    speed_walk: {type:GraphQLString},
+    speed_burrow: {type:GraphQLString},
+    speed_fly: {type:GraphQLString},
+    speed_swim: {type:GraphQLString},
+    strength: {type:GraphQLInt},
+    subtype: {type:GraphQLString},
+    type: {type:GraphQLString},
+    wisdom: {type:GraphQLInt},
+  })
+})
+
+const ReactionType = new GraphQLObjectType({
+  name: 'ReactionType',
+  fields: () => ({
+    monster_id: {type: GraphQLString},
+    reaction: {type: GraphQLString},
+    description: {type: GraphQLString}
+  })
+})
+
 const WeaponPropertyType = new GraphQLObjectType({
   name: 'WeaponProperty',
   fields: () => ({
@@ -134,6 +182,13 @@ const RootQuery = new GraphQLObjectType({
                         resolve(rows[0]);
                     });
                 });
+      }
+    },
+    AllMonsters: {
+      type: GraphQLList(MonsterType),
+      args: {},
+      resolve(parent, args){
+        return runQuery("SELECT * FROM monsters;")
       }
     },
   }
