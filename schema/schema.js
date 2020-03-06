@@ -1,6 +1,8 @@
 const graphql = require('graphql');
 const sqlite3 = require('sqlite3').verbose()
 
+// Establish Connectino to SQLite Database
+
 const db = new sqlite3.Database('./dnd5e.db', sqlite3.OPEN_READONLY, (err) => {
     if (err) {
       console.error(err.message);
@@ -8,7 +10,10 @@ const db = new sqlite3.Database('./dnd5e.db', sqlite3.OPEN_READONLY, (err) => {
     console.log('Connected to the dnd5e database.');
   });
 
-const runQuery = (statement, params = {}) => {
+
+// Abstract simple list query
+
+const runQueryList = (statement, params = {}) => {
   return new Promise((resolve, reject) => {
     db.all(statement, params,(err, rows) => {  
       if(err){
@@ -19,6 +24,16 @@ const runQuery = (statement, params = {}) => {
   });
 }
 
+const runQueryElement = (statement, params = {}) => {
+  return new Promise((resolve, reject) => {
+    db.all(statement, params,(err, rows) => {  
+      if(err){
+          reject([]);
+      }
+      resolve(rows[0]);
+    });
+  });
+}
 
 const {
   GraphQLObjectType,
@@ -30,6 +45,39 @@ const {
   GraphQLBoolean,
   GraphQLFloat
 } = graphql;
+
+const AbilityScoreType = new GraphQLObjectType({
+  name: 'AbilityScore',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    full_name: {type: GraphQLString},
+    description: {type: GraphQLString},
+    check_description: {type: GraphQLString},
+    skills: {
+      type: GraphQLList(SkillType),
+      resolve(parent, args){
+        return runQueryList("SELECT s.* FROM skills s JOIN skills_ability_score_link sasl ON sasl.skill_id = s.id JOIN ability_scores a ON a.id = sasl.ability_score_id WHERE a.id = $id",{$id: parent.id})
+      }
+    }
+  })
+})
+
+// const ClassType = new GraphQLObjectType({
+//   name: 'Class',
+//   fields: () => ({
+//     id: {type: GraphQLString},
+//     name: {type: GraphQLString},
+//     hit_die: {type: GraphQLString},
+//     proficiency_choices: {type: GraphQLString},
+//     proficiencies: {type: GraphQLString},
+//     saving_throws: {type: GraphQLString},
+//     starting_equipment: {type: GraphQLString},
+//     class_levels: {type: GraphQLString},
+//     subclasses: {type: GraphQLString},
+//     spellcasting: {type: GraphQLString},
+//   })
+// })
 
 const DamageTypeType = new GraphQLObjectType({
   name: 'DamageType',
@@ -53,7 +101,7 @@ const EquipmentType = new GraphQLObjectType({
     contents: {
       type: GraphQLList(EquipmentType),
       resolve(parent, args){
-        return runQuery("SELECT * FROM equipment WHERE id IN (SELECT content_id FROM equipment_contents_link WHERE equipment_id = $id)",{$id: parent.id})
+        return runQueryList("SELECT * FROM equipment WHERE id IN (SELECT content_id FROM equipment_contents_link WHERE equipment_id = $id)",{$id: parent.id})
       }
     },
     damage_dice_2h: {type: GraphQLString},
@@ -64,14 +112,7 @@ const EquipmentType = new GraphQLObjectType({
     damage_type: {
       type: DamageTypeType,
       resolve(parent,args){
-        return new Promise((resolve, reject) => {
-                    db.all("SELECT * FROM damage_types WHERE id=(SELECT LOWER(damage_type) FROM equipment WHERE id=$id)", {$id: parent.id},(err, rows) => {  
-                        if(err){
-                            reject([]);
-                        }
-                        resolve(rows[0]);
-                    });
-                });
+        return runQueryElement("SELECT * FROM damage_types WHERE id=(SELECT LOWER(damage_type) FROM equipment WHERE id=$id)", {$id: parent.id})
       }
     },
     description: {type: GraphQLString},
@@ -82,7 +123,7 @@ const EquipmentType = new GraphQLObjectType({
     properties: {
       type: GraphQLList(WeaponPropertyType),
       resolve(parent,args){
-        return runQuery("SELECT * FROM weapon_properties WHERE id IN (SELECT LOWER(property) FROM property_equipment_link WHERE equipment_id = $id)",{$id: parent.id})
+        return runQueryList("SELECT * FROM weapon_properties WHERE id IN (SELECT LOWER(property) FROM property_equipment_link WHERE equipment_id = $id)",{$id: parent.id})
       }
     },
     range_normal: {type: GraphQLInt},
@@ -101,8 +142,76 @@ const EquipmentType = new GraphQLObjectType({
   })
 })
 
+const FeatureType = new GraphQLObjectType({
+  name: 'Feature',
+  fields: () => ({
+    choice_num: {
+        type: GraphQLInt,
+        resolve(parent, args){
+          return new Promise((resolve, reject) => {
+            db.all('SELECT choose FROM feature_choice_link WHERE feature_id = $id LIMIT 1', {$id: parent.id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.length > 0 ? rows[0].choose : 0);
+            });
+          });
+        }
+      },
+    choice_from: {
+      type: GraphQLList(FeatureType),
+      resolve(parent, args) {
+        //return runQueryList('SELECT * FROM features WHERE id IN (SELECT from_feature_id FROM feature_choice_link WHERE feature_id = $id)', {$id: parent.id})
+        return new Promise((resolve, reject) => {
+            db.all('SELECT * FROM features WHERE id IN (SELECT from_feature_id FROM feature_choice_link WHERE feature_id = $id)', {$id: parent.id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.length > 0 ? rows : null);
+            });
+          });
+      }
+    },
+    class: {
+      //TODO:Update when ClassType is complete
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        //TODO:Update when ClassType is complete
+        return new Promise((resolve, reject) => {
+            db.all('SELECT class_id FROM feature_class_link WHERE feature_id = $id AND level = $level', {$id: parent.id, $level: parent.level},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.length > 0 ? rows.map(a => a.class_id) : null);
+            });
+          });
+      }
+    },
+    description: {type: GraphQLString},
+    feature_group: {type: GraphQLString},
+    id: {type: GraphQLString},
+    level: {type: GraphQLInt},
+    name: {type: GraphQLString},
+    prerequisites: {type: GraphQLString},
+    subclass: {
+      type: GraphQLString,
+      resolve(parent, args){
+        // return runQueryElement('SELECT subclass_id FROM feature_subclass_link WHERE feature_id = $id', {$id: parent.id})
+        return new Promise((resolve, reject) => {
+            db.all('SELECT subclass_id FROM feature_subclass_link WHERE feature_id = $id', {$id: parent.id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.length > 0 ? rows[0].subclass_id : null);
+            });
+          });
+      }
+    }
+  })
+})
+
 const MonsterType = new GraphQLObjectType({
-  name: 'MonsterType',
+  name: 'Monster',
   fields: () => ({
     alignment: {type:GraphQLString},
     armor_class: {type:GraphQLInt},
@@ -123,7 +232,7 @@ const MonsterType = new GraphQLObjectType({
     reactions: {
       type: GraphQLList(ReactionType),
       resolve(parent,args){
-        return runQuery("SELECT * FROM monster_reactions_link WHERE monster_id = $id;",{$id: parent.id})
+        return runQueryList("SELECT * FROM monster_reactions_link WHERE monster_id = $id;",{$id: parent.id})
       }
     },
     size: {type:GraphQLString},
@@ -141,11 +250,26 @@ const MonsterType = new GraphQLObjectType({
 })
 
 const ReactionType = new GraphQLObjectType({
-  name: 'ReactionType',
+  name: 'Reaction',
   fields: () => ({
     monster_id: {type: GraphQLString},
     reaction: {type: GraphQLString},
     description: {type: GraphQLString}
+  })
+})
+
+const SkillType = new GraphQLObjectType({
+  name: 'Skill',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    description: {type: GraphQLString},
+    abilities: {
+      type: AbilityScoreType,
+      resolve(parent,args){
+        return runQueryElement("SELECT a.* FROM skills_ability_score_link l JOIN ability_scores a ON l.ability_score_id = a.id WHERE l.skill_id = $id", {$id: parent.id})
+      }
+    }
   })
 })
 
@@ -159,13 +283,13 @@ const WeaponPropertyType = new GraphQLObjectType({
 })
 
 const RootQuery = new GraphQLObjectType({
-  name: 'RootQueryType',
+  name: 'RootQuery',
   fields: {
     AllEquipment: {
       type: GraphQLList(EquipmentType),
       args: {},
       resolve(parent, args){
-        return runQuery("SELECT * FROM equipment;")
+        return runQueryList("SELECT * FROM equipment;")
       }
     },
     Equipment: {
@@ -174,21 +298,71 @@ const RootQuery = new GraphQLObjectType({
         id: {type: GraphQLString}
       },
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-                    db.all("SELECT * FROM equipment WHERE id=$id;", {$id: args.id}, (err, rows) => {  
-                        if(err){
-                            reject([]);
-                        }
-                        resolve(rows[0]);
-                    });
-                });
+        return runQueryElement("SELECT * FROM equipment WHERE id=$id;", {$id: args.id})
       }
     },
     AllMonsters: {
       type: GraphQLList(MonsterType),
       args: {},
       resolve(parent, args){
-        return runQuery("SELECT * FROM monsters;")
+        return runQueryList("SELECT * FROM monsters;")
+      }
+    },
+    Monster: {
+      type: MonsterType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM monsters WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllSkills: {
+      type: GraphQLList(SkillType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM skills;")
+      }
+    },
+    Skill: {
+      type: SkillType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM skills WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllAbilityScores: {
+      type: GraphQLList(AbilityScoreType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM ability_scores;")
+      }
+    },
+    AbilityScore: {
+      type: AbilityScoreType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM ability_scores WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllFeatures: {
+      type: GraphQLList(FeatureType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM features;")
+      }
+    },
+    Feature: {
+      type: FeatureType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM features WHERE id=$id;", {$id: args.id})
       }
     },
   }
