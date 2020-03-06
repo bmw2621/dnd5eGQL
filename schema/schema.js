@@ -63,21 +63,72 @@ const AbilityScoreType = new GraphQLObjectType({
   })
 })
 
-// const ClassType = new GraphQLObjectType({
-//   name: 'Class',
-//   fields: () => ({
-//     id: {type: GraphQLString},
-//     name: {type: GraphQLString},
-//     hit_die: {type: GraphQLString},
-//     proficiency_choices: {type: GraphQLString},
-//     proficiencies: {type: GraphQLString},
-//     saving_throws: {type: GraphQLString},
-//     starting_equipment: {type: GraphQLString},
-//     class_levels: {type: GraphQLString},
-//     subclasses: {type: GraphQLString},
-//     spellcasting: {type: GraphQLString},
-//   })
-// })
+const CharacterClassType = new GraphQLObjectType({
+  name: 'CharacterClass',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    hit_die: {type: GraphQLInt},
+    proficiency_choices: {
+      type: GraphQLList(ProficiencyChoiceGroupType),
+      resolve(parent,args){
+        return runQueryList('SELECT choose, choice_group, class_id FROM class_proficiency_choice_link WHERE class_id = $id GROUP BY choice_group', {$id: parent.id})
+      }
+    },
+    proficiencies: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          return db.all('SELECT proficiency_id FROM class_proficiencies_link WHERE class_id = $id', {$id: parent.id},(err, rows) => {  
+            if(err){
+                reject([]);
+            }
+            resolve(rows.map(row => row.proficiency_id));
+          });
+        });
+      }
+    },
+    saving_throws: {
+      type: GraphQLList(AbilityScoreType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM ability_scores WHERE id IN (SELECT ability_scores_id FROM class_saving_throws WHERE class_id = $id)', {$id: parent.id})
+      }
+    },
+    // starting_equipment: {type: GraphQLString},
+    class_levels: {
+      type: GraphQLList(LevelType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM levels WHERE class_id = $id', {$id: parent.id})
+      }
+    },
+    // subclasses: {type: GraphQLString},
+    // spellcasting: {type: GraphQLString},
+  })
+})
+
+const ProficiencyChoiceGroupType = new GraphQLObjectType({
+  name: 'ProficiencyChoiceGroup',
+  fields: () => ({
+    choose: {type: GraphQLInt},
+    choice_group: {type: GraphQLInt},
+    class_id: {type: GraphQLString},
+    // TODO: Update when ProficiencyType is created
+    proficiency_id: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          return db.all('SELECT proficiency_id FROM class_proficiency_choice_link WHERE class_id = $id AND choice_group = $choiceGroup', {$id: parent.class_id, $choiceGroup: parent.choice_group},(err, rows) => {  
+            if(err){
+                reject([]);
+            }
+            resolve(rows.map(row => row.proficiency_id));
+          });
+        });
+      }
+    }
+  })
+})
+
 
 const DamageTypeType = new GraphQLObjectType({
   name: 'DamageType',
@@ -207,6 +258,120 @@ const FeatureType = new GraphQLObjectType({
           });
       }
     }
+  })
+})
+
+const LevelType = new GraphQLObjectType({
+  name: 'Level',
+  fields: () => ({
+    ability_score_bonuses: {type: GraphQLInt},
+    class_id: {type: GraphQLString},
+    class_specific: {
+      type: GraphQLList(ClassSpecificType),
+      resolve(parent,args){
+        return runQueryList('SELECT * FROM class_specifics WHERE class_id = $id AND level = $level', {$id: parent.class_id, $level: parent.level})
+      }
+    },
+    // feature_choices: {type: GraphQLString},
+    // features: {type: GraphQLString},
+    id: {type: GraphQLInt},
+    level: {type: GraphQLInt},
+    prof_bonus: {type: GraphQLInt},
+    spell_slots_level_1: {type: GraphQLInt},
+    spell_slots_level_2: {type: GraphQLInt},
+    spell_slots_level_3: {type: GraphQLInt},
+    spell_slots_level_4: {type: GraphQLInt},
+    spell_slots_level_5: {type: GraphQLInt},
+    // spellcasting: {type: GraphQLString},
+    subclass: {type: GraphQLString},
+    // subclass_specific: {type: GraphQLString},
+
+  })
+})
+
+const ClassSpecificType = new GraphQLObjectType({
+  name: 'ClassSpecific',
+  fields: () => ({
+    level: {type: GraphQLInt},
+    class_id: {type: GraphQLString},
+    level_id: {type: GraphQLInt},
+    action_surges: {type: GraphQLInt},
+    arcane_recovery_levels: {type: GraphQLInt},
+    aura_range: {type: GraphQLInt},
+    bardic_inspiration_die: {type: GraphQLInt},
+    brutal_critical_dice: {type: GraphQLInt},
+    channel_divinity_charges: {type: GraphQLInt},
+    creating_spell_slots: {
+      type: CreateSpellSlotClassSpecificType,
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM level_class_specific_creating_spell_slots WHERE level_id = $id", {$id: parent.level_id})
+      }
+    },
+    destroy_undead_cr: {type: GraphQLInt},
+    extra_attacks: {type: GraphQLInt},
+    favored_enemies: {type: GraphQLInt},
+    favored_terrain: {type: GraphQLInt},
+    indomitable_uses: {type: GraphQLInt},
+    invocations_known: {type: GraphQLInt},
+    ki_points: {type: GraphQLInt},
+    magical_secrets_max_5: {type: GraphQLInt},
+    magical_secrets_max_7: {type: GraphQLInt},
+    magical_secrets_max_9: {type: GraphQLInt},
+    martial_arts: {
+      type: MartialArtsClassSpecificType,
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM level_class_specific_martial_arts WHERE level_id = $id", {$id: parent.level_id})
+      }
+    },
+    metamagic_known: {type: GraphQLInt},
+    mystic_arcanum_level_6: {type: GraphQLInt},
+    mystic_arcanum_level_7: {type: GraphQLInt},
+    mystic_arcanum_level_8: {type: GraphQLInt},
+    mystic_arcanum_level_9: {type: GraphQLInt},
+    rage_count: {type: GraphQLInt},
+    rage_damage_bonus: {type: GraphQLInt},
+    sneak_attack: {
+      type: SneakAttackClassSpecificType,
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM level_class_specific_sneak_attack WHERE level_id = $id", {$id: parent.level_id})
+      }
+    },
+    song_of_rest_die: {type: GraphQLInt},
+    sorcery_points: {type: GraphQLInt},
+    unarmored_movement: {type: GraphQLInt},
+    wild_shape_fly: {type: GraphQLBoolean},
+    wild_shape_max_cr: {type: GraphQLFloat},
+    wild_shape_swim: {type: GraphQLBoolean},
+  })
+})
+
+const CreateSpellSlotClassSpecificType = new GraphQLObjectType({
+  name: 'CreateSpellSlot',
+  fields: () => ({
+    level_id: {type: GraphQLInt},
+    spell_slot_level_1_sorcery_point_cost: {type: GraphQLInt},
+    spell_slot_level_2_sorcery_point_cost: {type: GraphQLInt},
+    spell_slot_level_3_sorcery_point_cost: {type: GraphQLInt},
+    spell_slot_level_4_sorcery_point_cost: {type: GraphQLInt},
+    spell_slot_level_5_sorcery_point_cost: {type: GraphQLInt},
+  })
+})
+
+const MartialArtsClassSpecificType = new GraphQLObjectType({
+  name: 'MartialArts',
+  fields: () => ({
+    level_id: {type: GraphQLInt},
+    dice_count: {type: GraphQLInt},
+    dice_value: {type: GraphQLInt},
+  })
+})
+
+const SneakAttackClassSpecificType = new GraphQLObjectType({
+  name: 'SneakAttack',
+  fields: () => ({
+    level_id: {type: GraphQLInt},
+    dice_count: {type: GraphQLInt},
+    dice_value: {type: GraphQLInt},
   })
 })
 
@@ -363,6 +528,22 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM features WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllCharacterClasses: {
+      type: GraphQLList(CharacterClassType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM classes;")
+      }
+    },
+    CharacterClass: {
+      type: CharacterClassType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM classes WHERE id=$id;", {$id: args.id})
       }
     },
   }
