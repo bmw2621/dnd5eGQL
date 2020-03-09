@@ -272,8 +272,18 @@ const LevelType = new GraphQLObjectType({
         return runQueryList('SELECT * FROM class_specifics WHERE class_id = $id AND level = $level', {$id: parent.class_id, $level: parent.level})
       }
     },
-    // feature_choices: {type: GraphQLString},
-    // features: {type: GraphQLString},
+    feature_choices: {
+      type: GraphQLList(FeatureType),
+      resolve(parent, args){
+        return runQueryList('SELECT * from features WHERE id IN (SELECT feature_id FROM levels_feature_choices_link WHERE class_id = $id AND level = $level)',{$id: parent.class_id, $level: parent.level})
+      }
+    },
+    features: {
+      type: GraphQLList(FeatureType),
+      resolve(parent, args){
+        return runQueryList('SELECT * from features WHERE id IN (SELECT feature_id FROM levels_feature_link WHERE class_id = $id AND level = $level)',{$id: parent.class_id, $level: parent.level})
+      }
+    },
     id: {type: GraphQLInt},
     level: {type: GraphQLInt},
     prof_bonus: {type: GraphQLInt},
