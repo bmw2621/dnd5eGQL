@@ -17,9 +17,10 @@ To use the API in its current state, and test currently available endpoints:
 
 ## TODO
 
-- [ ] Races & Subraces endpoint and in schema
+- [X] Races endpoint and in schema
+- [ ] Subraces endpoint and in schema
 - [ ] Magic Schools endpoint and in schema
-- [ ] Equipment category and link to Equipment Type in schema
+- [ ] Equipment Category and link to Equipment Type in schema
 - [ ] Language Type in schema and in schema
 - [ ] Conditions Type in schema and endpoint
 - [ ] Proficiency Type in schema
