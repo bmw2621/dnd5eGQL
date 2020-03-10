@@ -14,3 +14,15 @@ To use the API in its current state, and test currently available endpoints:
 - `node app.js`
 - navigate to [http://localhost:4000/graphql](http://localhost:4000/graphql)
 - GraphIql is currently enabled and queries can be made in the interactive interface
+
+## TODO
+
+- [ ] Races & Subraces endpoint and in schema
+- [ ] Magic Schools endpoint and in schema
+- [ ] Equipment category and link to Equipment Type in schema
+- [ ] Language Type in schema and in schema
+- [ ] Conditions Type in schema and endpoint
+- [ ] Proficiency Type in schema
+- [ ] Spells endpoint and in schema
+- [ ] Traits endpoint and in schema
+- [ ] Weapons Properties endpoint and in schema
