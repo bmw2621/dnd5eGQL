@@ -94,7 +94,12 @@ const CharacterClassType = new GraphQLObjectType({
         return runQueryList('SELECT * FROM ability_scores WHERE id IN (SELECT ability_scores_id FROM class_saving_throws WHERE class_id = $id)', {$id: parent.id})
       }
     },
-    // starting_equipment: {type: GraphQLString},
+    starting_equipment: {
+      type: GraphQLList(StartingEquipmentType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM starting_equipment WHERE class_id = $id', {$id: parent.id})
+      }
+    },
     class_levels: {
       type: GraphQLList(LevelType),
       resolve(parent, args){
@@ -573,37 +578,37 @@ const StartingEquipmentType = new GraphQLObjectType({
     chosen_equipment_1: {
       type: GraphQLList(StartingEquipmentChoiceType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM starting_equipment_choices WHERE class_id = $id AND choice_id = 1 GROUP BY choice_group', {$id: parent.class_id})
       }
     },
     chosen_equipment_2: {
       type: GraphQLList(StartingEquipmentChoiceType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM starting_equipment_choices WHERE class_id = $id AND choice_id = 2 GROUP BY choice_group', {$id: parent.class_id})
       }
     },
     chosen_equipment_3: {
       type: GraphQLList(StartingEquipmentChoiceType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM starting_equipment_choices WHERE class_id = $id AND choice_id = 3 GROUP BY choice_group', {$id: parent.class_id})
       }
     },
     chosen_equipment_4: {
       type: GraphQLList(StartingEquipmentChoiceType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM starting_equipment_choices WHERE class_id = $id AND choice_id = 4 GROUP BY choice_group', {$id: parent.class_id})
       }
     },
-    chosen_equipment_4: {
+    chosen_equipment_5: {
       type: GraphQLList(StartingEquipmentChoiceType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM starting_equipment_choices WHERE class_id = $id AND choice_id = 5 GROUP BY choice_group', {$id: parent.class_id})
       }
     },
     starting_equipment: {
       type: GraphQLList(EquipmentType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM equipment WHERE id IN (SELECT equipment_id FROM starting_equipment_link WHERE class_id = $id)', {$id: parent.class_id})
       }
     }
   })
@@ -614,12 +619,14 @@ const StartingEquipmentChoiceType = new GraphQLObjectType({
   fields: () => ({
     choose: {type: GraphQLInt},
     choice_group: {type: GraphQLInt},
+    choice_id: {type: GraphQLInt},
     choose_from: {
       type: GraphQLList(EquipmentType),
       resolve(parent, args){
-        // TODO
+        return runQueryList('SELECT * FROM equipment WHERE id IN (SELECT equipment_id FROM starting_equipment_choices WHERE class_id = $id AND choice_id = $choice_id AND choice_group = $choice_group)', {$id: parent.class_id, $choice_id: parent.choice_id, $choice_group: parent.choice_group})
       }
-    }
+    },
+    class_id: {type: GraphQLString}
   })
 })
 
