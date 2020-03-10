@@ -458,6 +458,27 @@ const MonsterType = new GraphQLObjectType({
   })
 })
 
+const ProficiencyType = new GraphQLObjectType({
+  name: 'Proficiency',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    type: {type: GraphQLString},
+    races: {
+      type: GraphQLList(RaceType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM races WHERE id IN (SELECT race_id FROM proficiency_race_link WHERE proficiency_id = $id)',{$id: parent.id})
+      }
+    },
+    classes: {
+      type: GraphQLList(CharacterClassType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM classes WHERE id IN (SELECT class_id FROM class_proficiencies_link WHERE proficiency_id = $id)',{$id: parent.id})
+      }
+    },
+  })
+})
+
 const ProficiencyChoiceGroupType = new GraphQLObjectType({
   name: 'ProficiencyChoiceGroup',
   fields: () => ({
@@ -972,6 +993,22 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM languages WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllProficiencies: {
+      type: GraphQLList(ProficiencyType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM proficiencies;")
+      }
+    },
+    Proficiency: {
+      type: ProficiencyType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM proficiencies WHERE id=$id;", {$id: args.id})
       }
     },
   }
