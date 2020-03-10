@@ -320,6 +320,29 @@ const FeatureType = new GraphQLObjectType({
   })
 })
 
+const LanguageType = new GraphQLObjectType({
+  name: 'Language',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    type: {type: GraphQLString},
+    script: {type: GraphQLString},
+    typical_speakers: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT speaker FROM language_typical_speakers WHERE language_id = $id', {$id: parent.id},(err, rows) => {  
+            if(err){
+                reject([]);
+            }
+            resolve(rows.map(row => row.speaker));
+          });
+        });
+      }
+    }
+  })
+})
+
 const LevelType = new GraphQLObjectType({
   name: 'Level',
   fields: () => ({
@@ -481,18 +504,10 @@ const RaceType = new GraphQLObjectType({
         return runQueryList('SELECT * FROM race_ability_bonus_options WHERE race_id = $id GROUP BY race_id', {$id: parent.id})
       }
     },
-    // TODO: Update when Language Type is created
     languages: {
-      type: GraphQLList(GraphQLString),
+      type: GraphQLList(LanguageType),
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-          db.all('SELECT language_id FROM race_language_link WHERE race_id = $id', {$id: parent.id},(err, rows) => {  
-            if(err){
-                reject([]);
-            }
-            resolve(rows.map(row => row.language_id));
-          });
-        });
+        return runQueryList('SELECT * FROM languages WHERE id IN (SELECT language_id FROM race_language_link WHERE race_id = $id)', {$id: parent.id})
       }
     },
     language_options: {
@@ -594,18 +609,10 @@ const RaceLanguageOptionType = new GraphQLObjectType({
   fields: () => ({
     race_id: {type: GraphQLString},
     choose: {type: GraphQLInt},
-    // TODO: Update when Language Type is created
     language: {
-      type: GraphQLList(GraphQLString),
+      type: GraphQLList(LanguageType),
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-          db.all('SELECT language_id FROM race_language_options WHERE race_id = $id', {$id: parent.race_id},(err, rows) => {  
-              if(err){
-                  reject([]);
-              }
-              resolve(rows.map(row => row.language_id));
-            });
-          });
+        return runQueryList('SELECT * FROM languages WHERE id IN (SELECT language_id FROM race_language_options WHERE race_id = $id)', {$id: parent.race_id})
       }
     },
   })
@@ -949,6 +956,22 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM races WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllLanguages: {
+      type: GraphQLList(LanguageType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM languages;")
+      }
+    },
+    Language: {
+      type: LanguageType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM languages WHERE id=$id;", {$id: args.id})
       }
     },
   }
