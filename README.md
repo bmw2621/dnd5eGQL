@@ -13,7 +13,7 @@ To use the API in its current state, and test currently available endpoints:
 - `npm install`
 - `node app.js`
 - navigate to [http://localhost:4000/graphql](http://localhost:4000/graphql)
-- GraphIql is currently enabled and queries can be made in the interactive interface
+- GraphIQL is currently enabled and queries can be made in the interactive interface
 
 ## TODO
 
