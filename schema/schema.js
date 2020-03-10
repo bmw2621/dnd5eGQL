@@ -458,6 +458,203 @@ const ProficiencyChoiceGroupType = new GraphQLObjectType({
   })
 })
 
+const RaceType = new GraphQLObjectType({
+  name: 'Race',
+  fields: () => ({
+    age: {type: GraphQLString},
+    alignment: {type: GraphQLString},
+    id: {type: GraphQLString},
+    language_description: {type: GraphQLString},
+    name: {type: GraphQLString},
+    size: {type: GraphQLString},
+    size_description: {type: GraphQLString},
+    speed: {type: GraphQLInt},
+    ability_bonus: {
+      type: GraphQLList(RaceAbilityBonusType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM race_ability_bonuses WHERE race_id = $id', {$id: parent.id})
+      }
+    },
+    ability_bonus_options: {
+      type: GraphQLList(RaceAbilityBonusOptionType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM race_ability_bonus_options WHERE race_id = $id GROUP BY race_id', {$id: parent.id})
+      }
+    },
+    // TODO: Update when Language Type is created
+    languages: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT language_id FROM race_language_link WHERE race_id = $id', {$id: parent.id},(err, rows) => {  
+            if(err){
+                reject([]);
+            }
+            resolve(rows.map(row => row.language_id));
+          });
+        });
+      }
+    },
+    language_options: {
+      type: GraphQLList(RaceLanguageOptionType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM race_language_options WHERE race_id = $id GROUP BY race_id', {$id: parent.id})
+      }
+    },
+    starting_proficiencies: {
+      // TODO: Update when Proficiency Type is created
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT proficiency_id FROM race_starting_proficiencies WHERE race_id = $id', {$id: parent.id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.map(row => row.proficiency_id));
+            });
+          });
+      }
+    },
+    starting_proficiency_options: {
+      type: GraphQLList(RaceStartingProficiencyOptionType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM race_starting_proficiency_options WHERE race_id = $id GROUP BY race_id', {$id: parent.id})
+      }
+    },
+    traits: {
+       // TODO: Update when Proficiency Type is created
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT trait_id FROM race_trait_link WHERE race_id = $id', {$id: parent.id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.map(row => row.trait_id));
+            });
+          });
+      }
+    },
+    trait_options: {
+      type: GraphQLList(RaceTraitOptionType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM race_trait_options WHERE race_id = $id GROUP BY race_id', {$id: parent.id})
+      }
+    },
+    subraces: {
+      type: GraphQLList(GraphQLString),
+      // TODO: Update when Subrace Type created
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT subrace_id FROM race_subrace_link WHERE race_id = $id', {$id: parent.id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.map(row => row.subrace_id));
+            });
+          });
+      }
+    },
+  })
+})
+
+const RaceAbilityBonusType = new GraphQLObjectType({
+  name: 'RaceAbilityBonus',
+  fields: () => ({
+    race_id: {type: GraphQLString},
+    ability_score_id: {type: GraphQLString},
+    ability_score: {
+      type: AbilityScoreType,
+      resolve(parent, args){
+        return runQueryElement('SELECT * FROM ability_scores WHERE id = $id', {$id: parent.ability_score_id})
+      }
+    },
+    bonus: {type: GraphQLInt}
+  })
+})
+
+const RaceAbilityBonusOptionType = new GraphQLObjectType({
+  name: 'RaceAbilityBonusOption',
+  fields: () => ({
+    race_id: {type: GraphQLString},
+    ability_score_id: {type: GraphQLString},
+    choose: {type: GraphQLInt},
+    ability_score: {
+      type: GraphQLList(AbilityScoreType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM ability_scores WHERE id IN (SELECT ability_score_id FROM race_ability_bonus_options WHERE race_id = $id)', {$id: parent.race_id})
+      }
+    },
+    bonus: {type: GraphQLInt}
+  })
+})
+
+const RaceLanguageOptionType = new GraphQLObjectType({
+  name: 'RaceLanguageOption',
+  fields: () => ({
+    race_id: {type: GraphQLString},
+    choose: {type: GraphQLInt},
+    // TODO: Update when Language Type is created
+    language: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT language_id FROM race_language_options WHERE race_id = $id', {$id: parent.race_id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.map(row => row.language_id));
+            });
+          });
+      }
+    },
+  })
+})
+
+const RaceStartingProficiencyOptionType = new GraphQLObjectType({
+  name: 'RaceStartingProficiencyOption',
+  fields: () => ({
+    race_id: {type: GraphQLString},
+    choose: {type: GraphQLInt},
+    // TODO: Update when Proficiency Type is created
+    proficiencies: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT proficiency_id FROM race_starting_proficiency_options WHERE race_id = $id', {$id: parent.race_id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.map(row => row.proficiency_id));
+            });
+          });
+      }
+    },
+  })
+})
+
+const RaceTraitOptionType = new GraphQLObjectType({
+  name: 'RaceTraitOption',
+  fields: () => ({
+    race_id: {type: GraphQLString},
+    choose: {type: GraphQLInt},
+    // TODO: Update when Trait Type is created
+    traits: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT trait_id FROM race_trait_options WHERE race_id = $id', {$id: parent.race_id},(err, rows) => {  
+              if(err){
+                  reject([]);
+              }
+              resolve(rows.map(row => row.trait_id));
+            });
+          });
+      }
+    },
+  })
+})
+
 const ReactionType = new GraphQLObjectType({
   name: 'Reaction',
   fields: () => ({
@@ -736,6 +933,22 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM classes WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllRaces: {
+      type: GraphQLList(RaceType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM races;")
+      }
+    },
+    Race: {
+      type: RaceType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM races WHERE id=$id;", {$id: args.id})
       }
     },
   }
