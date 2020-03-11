@@ -18,12 +18,12 @@ To use the API in its current state, and test currently available endpoints:
 ## TODO
 
 - [X] Races endpoint and in schema
-- [ ] Subraces endpoint and in schema
+- [X] Subraces endpoint and in schema
 - [ ] Magic Schools endpoint and in schema
 - [ ] Equipment Category and link to Equipment Type in schema
 - [X] Language Type in schema and in schema
 - [ ] Conditions Type in schema and endpoint
 - [ ] Proficiency Type in schema
 - [ ] Spells endpoint and in schema
-- [ ] Traits endpoint and in schema
+- [ ] Traits endpoint and in schema (Update Race and Subrace traits to graph to Traits Type)
 - [ ] Weapons Properties endpoint and in schema
