@@ -22,7 +22,7 @@ To use the API in its current state, and test currently available endpoints:
 - [X] Magic Schools endpoint and in schema
 - [ ] Equipment Category and link to Equipment Type in schema
 - [X] Language Type in schema and in schema
-- [ ] Conditions Type in schema and endpoint
+- [X] Conditions Type in schema and endpoint
 - [X] Proficiency Type in schema
 - [X] Spells endpoint and in schema
 - [X] Traits endpoint and in schema (Update Race and Subrace traits to graph to Traits Type)

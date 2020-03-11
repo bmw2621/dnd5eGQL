@@ -189,6 +189,15 @@ const CreateSpellSlotClassSpecificType = new GraphQLObjectType({
   })
 })
 
+const ConditionType = new GraphQLObjectType({
+  name: 'Condition',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    description: {type: GraphQLString},
+  })
+})
+
 const DamageTypeType = new GraphQLObjectType({
   name: 'DamageType',
   fields: () => ({
@@ -1196,6 +1205,22 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM magic_schools WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllConditions: {
+      type: GraphQLList(ConditionType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM conditions;")
+      }
+    },
+    Condition: {
+      type: ConditionType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM conditions WHERE id=$id;", {$id: args.id})
       }
     },
   }
