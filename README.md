@@ -26,4 +26,4 @@ To use the API in its current state, and test currently available endpoints:
 - [X] Proficiency Type in schema
 - [X] Spells endpoint and in schema
 - [X] Traits endpoint and in schema (Update Race and Subrace traits to graph to Traits Type)
-- [ ] Weapons Properties endpoint and in schema
+- [X] Weapons Properties endpoint and in schema

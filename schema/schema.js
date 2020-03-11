@@ -1007,6 +1007,15 @@ const TraitType = new GraphQLObjectType({
   })
 })
 
+const WeaponCategoryType = new GraphQLObjectType({
+  name: 'WeaponCategory',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    description: {type: GraphQLString},
+  })
+})
+
 const WeaponPropertyType = new GraphQLObjectType({
   name: 'WeaponProperty',
   fields: () => ({
