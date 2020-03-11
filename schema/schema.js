@@ -283,10 +283,8 @@ const FeatureType = new GraphQLObjectType({
       }
     },
     class: {
-      //TODO:Update when ClassType is complete
       type: GraphQLList(GraphQLString),
       resolve(parent, args){
-        //TODO:Update when ClassType is complete
         return new Promise((resolve, reject) => {
             db.all('SELECT class_id FROM feature_class_link WHERE feature_id = $id AND level = $level', {$id: parent.id, $level: parent.level},(err, rows) => {  
               if(err){
@@ -306,7 +304,6 @@ const FeatureType = new GraphQLObjectType({
     subclass: {
       type: GraphQLString,
       resolve(parent, args){
-        // return runQueryElement('SELECT subclass_id FROM feature_subclass_link WHERE feature_id = $id', {$id: parent.id})
         return new Promise((resolve, reject) => {
             db.all('SELECT subclass_id FROM feature_subclass_link WHERE feature_id = $id', {$id: parent.id},(err, rows) => {  
               if(err){
@@ -407,6 +404,15 @@ const LevelSpellcastingType = new GraphQLObjectType({
     spell_slots_level_8: {type: GraphQLInt},
     spell_slots_level_9: {type: GraphQLInt},
     spells_known: {type: GraphQLInt}
+  })
+})
+
+const MagicSchoolType = new GraphQLObjectType({
+  name: "MagicSchool",
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    description: {type: GraphQLString},
   })
 })
 
@@ -680,6 +686,56 @@ const SneakAttackClassSpecificType = new GraphQLObjectType({
     level_id: {type: GraphQLInt},
     dice_count: {type: GraphQLInt},
     dice_value: {type: GraphQLInt},
+  })
+})
+
+const SpellType = new GraphQLObjectType({
+  name: 'Spell',
+  fields: () => ({
+    casting_time: {type: GraphQLString},
+    classes: {
+      type: GraphQLList(CharacterClassType),
+      resolve(parent, args){
+        return runQueryList('SELECT * FROM classes WHERE id IN (SELECT class_id FROM spell_class_link WHERE spell_id = $id)', {$id: parent.id})
+      }
+    },
+    components: {
+      type: GraphQLList(GraphQLString),
+      resolve(parent, args){
+        return new Promise((resolve, reject) => {
+          db.all('SELECT component FROM spell_components WHERE spell_id = $id', {$id: parent.id},(err, rows) => {  
+            if(err){
+                reject([]);
+            }
+            resolve(rows.map(row => row.component));
+          });
+        });
+      }
+    },
+    concentration: {type: GraphQLBoolean},
+    description: {type: GraphQLString},
+    duration: {type: GraphQLString},
+    higher_level: {type: GraphQLString},
+    id: {type: GraphQLString},
+    level: {type: GraphQLInt},
+    material: {type: GraphQLString},
+    name: {type: GraphQLString},
+    page: {type: GraphQLString},
+    range: {type: GraphQLString},
+    ritual: {type: GraphQLBoolean},
+    // TODO: Update when MaginSchoolType is created
+    school: {
+      type: MagicSchoolType,
+      resolve(parent, args){
+        return runQueryElement('SELECT * FROM magic_schools WHERE id = (SELECT school_id FROM spell_magic_school_link WHERE spell_id = $id)', {$id: parent.id})
+      }
+    },
+    subclasses: {
+      type: GraphQLList(SubclassType),
+      resolve(parent,args){
+        return runQueryList('SELECT * FROM subclasses WHERE id IN (SELECT subclass_id FROM spell_subclass_link WHERE spell_id = $id)', {$id: parent.id})
+      }
+    },
   })
 })
 
@@ -1108,6 +1164,38 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM traits WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllSpells: {
+      type: GraphQLList(SpellType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM spells;")
+      }
+    },
+    Spell: {
+      type: SpellType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM spells WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllMagicSchools: {
+      type: GraphQLList(MagicSchoolType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM magic_schools;")
+      }
+    },
+    MagicSchool: {
+      type: MagicSchoolType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM magic_schools WHERE id=$id;", {$id: args.id})
       }
     },
   }
