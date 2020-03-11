@@ -1243,6 +1243,22 @@ const RootQuery = new GraphQLObjectType({
         return runQueryElement("SELECT * FROM conditions WHERE id=$id;", {$id: args.id})
       }
     },
+    AllEquipmentCategories: {
+      type: GraphQLList(EquipmentCategoryType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM equipment_categories;")
+      }
+    },
+    EquipmentCategory: {
+      type: EquipmentCategoryType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM equipment_categories WHERE id=$id;", {$id: args.id})
+      }
+    },
   }
 })
 
