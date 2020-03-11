@@ -550,17 +550,9 @@ const RaceType = new GraphQLObjectType({
       }
     },
     traits: {
-       // TODO: Update when Trait Type is created
-      type: GraphQLList(GraphQLString),
+      type: GraphQLList(TraitType),
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-          db.all('SELECT trait_id FROM race_trait_link WHERE race_id = $id', {$id: parent.id},(err, rows) => {  
-              if(err){
-                  reject([]);
-              }
-              resolve(rows.map(row => row.trait_id));
-            });
-          });
+        return runQueryList('SELECT * FROM traits WHERE id IN (SELECT trait_id FROM race_trait_link WHERE race_id = $id)', {$id: parent.id})
       }
     },
     trait_options: {
@@ -649,18 +641,10 @@ const RaceTraitOptionType = new GraphQLObjectType({
   fields: () => ({
     race_id: {type: GraphQLString},
     choose: {type: GraphQLInt},
-    // TODO: Update when Trait Type is created
     traits: {
-      type: GraphQLList(GraphQLString),
+      type: GraphQLList(TraitType),
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-          db.all('SELECT trait_id FROM race_trait_options WHERE race_id = $id', {$id: parent.race_id},(err, rows) => {  
-              if(err){
-                  reject([]);
-              }
-              resolve(rows.map(row => row.trait_id));
-            });
-          });
+        return runQueryList('SELECT * FROM traits WHERE id IN (SELECT trait_id FROM race_trait_options WHERE race_id = $id)', {$id: parent.race_id})
       }
     },
   })
@@ -807,24 +791,16 @@ const SubraceType = new GraphQLObjectType({
         return runQueryElement('SELECT * FROM races WHERE id = (SELECT race_id FROM race_subrace_link WHERE subrace_id = $id)', {$id: parent.id})
       }
     },
-    racial_trait_options: {
+    trait_options: {
       type: GraphQLList(SubraceTraitOptionType),
       resolve(parent, args){
         return runQueryList('SELECT * FROM subrace_trait_options WHERE subrace_id = $id GROUP BY subrace_id', {$id: parent.id})
       }
     },
-    racial_traits: {
-       // TODO: Update when Trait Type is created
-      type: GraphQLList(GraphQLString),
+    traits: {
+      type: GraphQLList(TraitType),
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-          db.all('SELECT trait_id FROM subrace_traits WHERE subrace_id = $id', {$id: parent.id},(err, rows) => {  
-              if(err){
-                  reject([]);
-              }
-              resolve(rows.map(row => row.trait_id));
-            });
-          });
+        return runQueryList('SELECT * FROM traits WHERE id IN (SELECT trait_id FROM subrace_traits WHERE subrace_id = $id)', {$id: parent.id})
       }
     },
     starting_proficiencies: {
@@ -855,18 +831,10 @@ const SubraceTraitOptionType = new GraphQLObjectType({
   fields: () => ({
     subrace_id: {type: GraphQLString},
     choose: {type: GraphQLInt},
-    // TODO: Update when Trait Type is created
     traits: {
-      type: GraphQLList(GraphQLString),
+      type: GraphQLList(TraitType),
       resolve(parent, args){
-        return new Promise((resolve, reject) => {
-          db.all('SELECT trait_id FROM subrace_trait_options WHERE subrace_id = $id', {$id: parent.subrace_id},(err, rows) => {  
-              if(err){
-                  reject([]);
-              }
-              resolve(rows.map(row => row.trait_id));
-            });
-          });
+        return runQueryList('SELECT * FROM traits WHERE id IN (SELECT trait_id FROM subrace_trait_options WHERE subrace_id = $id)', {$id: parent.subrace_id})
       }
     },
   })
@@ -930,6 +898,27 @@ const StartingEquipmentChoiceType = new GraphQLObjectType({
       }
     },
     class_id: {type: GraphQLString}
+  })
+})
+
+const TraitType = new GraphQLObjectType({
+  name: 'Trait',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    description: {type: GraphQLString},
+    races: {
+      type: GraphQLList(RaceType),
+      resolve(parent, args){
+        return runQueryList('SElECT * FROM races WHERE id IN (SELECT race_id FROM race_trait_link WHERE trait_id = $id)', {$id: parent.id})
+      }
+    },
+    subraces: {
+      type: GraphQLList(SubraceType),
+      resolve(parent, args){
+        return runQueryList('SElECT * FROM subraces WHERE id IN (SELECT subrace_id FROM subrace_traits WHERE trait_id = $id)', {$id: parent.id})
+      }
+    },
   })
 })
 
@@ -1103,6 +1092,22 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve(parent, args){
         return runQueryElement("SELECT * FROM proficiencies WHERE id=$id;", {$id: args.id})
+      }
+    },
+    AllTraits: {
+      type: GraphQLList(TraitType),
+      args: {},
+      resolve(parent, args){
+        return runQueryList("SELECT * FROM traits;")
+      }
+    },
+    Trait: {
+      type: TraitType,
+      args: {
+        id: {type: GraphQLString}
+      },
+      resolve(parent, args){
+        return runQueryElement("SELECT * FROM traits WHERE id=$id;", {$id: args.id})
       }
     },
   }
