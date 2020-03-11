@@ -235,7 +235,13 @@ const EquipmentType = new GraphQLObjectType({
       }
     },
     description: {type: GraphQLString},
-    equipment_category: {type: GraphQLString},
+    equipment_category_id: {type: GraphQLString},
+    equipment_category: {
+      type: EquipmentCategoryType,
+      resolve(parent,args){
+        return runQueryElement('SELECT * FROM equipment_categories WHERE id = $id', {$id: parent.equipment_category_id})
+      }
+    },
     gear_category: {type: GraphQLString},
     id: {type: GraphQLString},
     name: {type: GraphQLString},
@@ -258,6 +264,20 @@ const EquipmentType = new GraphQLObjectType({
     weapon_category: {type: GraphQLString},
     weapon_range: {type: GraphQLString},
     weight: {type: GraphQLFloat},
+  })
+})
+
+const EquipmentCategoryType = new GraphQLObjectType({
+  name: 'EquipmentCategory',
+  fields: () => ({
+    id: {type: GraphQLString},
+    name: {type: GraphQLString},
+    equipment: {
+      type: GraphQLList(EquipmentType),
+      resolve(parent,args){
+        return runQueryList('SELECT * FROM equipment WHERE id IN (SELECT equipment_id FROM equipment_category_link WHERE category_id = $id)', {$id: parent.id})
+      }
+    },
   })
 })
 

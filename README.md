@@ -20,7 +20,7 @@ To use the API in its current state, and test currently available endpoints:
 - [X] Races endpoint and in schema
 - [X] Subraces endpoint and in schema
 - [X] Magic Schools endpoint and in schema
-- [ ] Equipment Category and link to Equipment Type in schema
+- [X] Equipment Category and link to Equipment Type in schema
 - [X] Language Type in schema and in schema
 - [X] Conditions Type in schema and endpoint
 - [X] Proficiency Type in schema
